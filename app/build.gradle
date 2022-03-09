@@ -17,6 +17,10 @@ android {
         vectorDrawables {
             useSupportLibrary true
         }
+
+        ndk {
+            abiFilters "x86_64", "arm64-v8a"
+        }
     }
 
     buildTypes {
@@ -43,6 +47,27 @@ android {
             excludes += '/META-INF/{AL2.0,LGPL2.1}'
         }
     }
+
+}
+
+
+configurations {
+    skikoNativeX64
+    skikoNativeArm64
+}
+
+def jniDir = "${projectDir.absolutePath}/src/main/jniLibs"
+
+def unzipTaskX64 = tasks.register("unzipNativeX64", Copy) {
+    def skikoNativeX64 = configurations.skikoNativeX64
+    from(skikoNativeX64.getFiles().collect { zipTree(it) })
+    into(file("$jniDir/x86_64"))
+}
+
+def unzipTaskArm64 = tasks.register("unzipNativeArm64", Copy) {
+    def skikoNativeArm64 = configurations.skikoNativeArm64
+    from(skikoNativeArm64.getFiles().collect { zipTree(it) })
+    into(file("$jniDir/arm64-v8a"))
 }
 
 dependencies {
@@ -51,11 +76,23 @@ dependencies {
     implementation "androidx.compose.ui:ui:$compose_version"
     implementation "androidx.compose.material:material:$compose_version"
     implementation "androidx.compose.ui:ui-tooling-preview:$compose_version"
-    implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.3.1'
-    implementation 'androidx.activity:activity-compose:1.3.1'
+    implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.4.1'
+    implementation 'androidx.activity:activity-compose:1.4.0'
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.3'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.4.0'
     androidTestImplementation "androidx.compose.ui:ui-test-junit4:$compose_version"
     debugImplementation "androidx.compose.ui:ui-tooling:$compose_version"
+
+
+    def skiko_version = "0.7.15"
+    implementation "org.jetbrains.skiko:skiko-android:$skiko_version"
+
+    skikoNativeX64("org.jetbrains.skiko:skiko-android-runtime-x64:$skiko_version")
+    skikoNativeArm64("org.jetbrains.skiko:skiko-android-runtime-arm64:$skiko_version")
+}
+
+tasks.withType(org.jetbrains.kotlin.gradle.dsl.KotlinJvmCompile).configureEach {
+    dependsOn(unzipTaskX64)
+    dependsOn(unzipTaskArm64)
 }
